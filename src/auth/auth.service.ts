@@ -6,13 +6,13 @@ export class AuthService {
   constructor(private prisma: PrismaService) {}
 
   async login(body: { email: string; password: string }) {
-    console.log("LOGIN START");
+    console.log("LOGIN BODY:", body);
 
     const user = await this.prisma.user.findUnique({
       where: { email: body.email },
     });
 
-    console.log("USER:", user);
+    console.log("USER DB:", user);
 
     if (!user) {
       throw new UnauthorizedException('User not found');
