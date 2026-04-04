@@ -1,7 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -10,31 +15,60 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async login(body: { email: string; password: string }) {
+  // 🔥 REGISTER
+  async register(data: { email: string; password: string }) {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email: data.email,
+          password: hashedPassword,
+        },
+      });
+
+      return {
+        id: user.id,
+        email: user.email,
+      };
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('El email ya está registrado');
+      }
+      throw error;
+    }
+  }
+
+  // 🔐 LOGIN
+  async login(data: { email: string; password: string }) {
     const user = await this.prisma.user.findUnique({
-      where: { email: body.email },
+      where: { email: data.email },
     });
 
+    // ❌ si no existe
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const isMatch = await bcrypt.compare(body.password, user.password);
+    // 🔑 comparar password
+    const isMatch = await bcrypt.compare(data.password, user.password);
 
     if (!isMatch) {
-      throw new UnauthorizedException('Invalid password');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const payload = {
+    // 🎟 generar token
+    const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
-    };
-
-    const token = this.jwtService.sign(payload);
+    });
 
     return {
-      message: 'Login successful',
       access_token: token,
+      user: {
+        id: user.id,
+        email: user.email,
+      },
     };
   }
 }
