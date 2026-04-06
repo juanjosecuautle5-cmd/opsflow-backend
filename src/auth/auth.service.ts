@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
+import { User } from '@prisma/client'; // 🔥 IMPORTANTE
 
 @Injectable()
 export class AuthService {
@@ -24,12 +24,14 @@ export class AuthService {
         data: {
           email: data.email,
           password: hashedPassword,
+          // role se asigna automáticamente (USER)
         },
       });
 
       return {
         id: user.id,
         email: user.email,
+        role: user.role, // ✅ YA FUNCIONA
       };
     } catch (error: any) {
       if (error.code === 'P2002') {
@@ -41,26 +43,25 @@ export class AuthService {
 
   // 🔐 LOGIN
   async login(data: { email: string; password: string }) {
-    const user = await this.prisma.user.findUnique({
+    const user: User | null = await this.prisma.user.findUnique({
       where: { email: data.email },
     });
 
-    // ❌ si no existe
     if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // 🔑 comparar password
     const isMatch = await bcrypt.compare(data.password, user.password);
 
     if (!isMatch) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // 🎟 generar token
+    // 🔥 TOKEN CON ROLE
     const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
+      role: user.role,
     });
 
     return {
@@ -68,6 +69,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        role: user.role, // ✅ YA FUNCIONA
       },
     };
   }
