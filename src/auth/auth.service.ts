@@ -1,12 +1,7 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client'; // 🔥 IMPORTANTE
 
 @Injectable()
 export class AuthService {
@@ -15,7 +10,6 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // 🔥 REGISTER
   async register(data: { email: string; password: string }) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
@@ -24,14 +18,13 @@ export class AuthService {
         data: {
           email: data.email,
           password: hashedPassword,
-          // role se asigna automáticamente (USER)
         },
       });
 
       return {
         id: user.id,
         email: user.email,
-        role: user.role, // ✅ YA FUNCIONA
+        role: user.role,
       };
     } catch (error: any) {
       if (error.code === 'P2002') {
@@ -41,9 +34,8 @@ export class AuthService {
     }
   }
 
-  // 🔐 LOGIN
   async login(data: { email: string; password: string }) {
-    const user: User | null = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email: data.email },
     });
 
@@ -57,7 +49,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // 🔥 TOKEN CON ROLE
     const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
@@ -69,7 +60,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role, // ✅ YA FUNCIONA
+        role: user.role,
       },
     };
   }

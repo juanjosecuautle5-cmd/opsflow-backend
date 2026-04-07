@@ -22,7 +22,15 @@ export class UsersService {
       select: {
         id: true,
         email: true,
+        role: true,
       },
+    });
+  }
+
+  async changeRole(userId: string, role: 'ADMIN' | 'USER') {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { role },
     });
   }
 }

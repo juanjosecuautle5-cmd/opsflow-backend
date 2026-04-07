@@ -6,13 +6,16 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // ✅ Validaciones globales
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
+      whitelist: true, // elimina campos no permitidos
+      forbidNonWhitelisted: true, // error si mandan campos extra
+      transform: true, // transforma tipos automáticamente
     }),
   );
+
+  // 🚫 NO poner guards globales aquí (rompe register/login)
 
   await app.listen(3000);
 }
