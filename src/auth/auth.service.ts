@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
@@ -24,7 +28,7 @@ export class AuthService {
       return {
         id: user.id,
         email: user.email,
-        role: user.role,
+        // 🔥 ya no role aquí
       };
     } catch (error: any) {
       if (error.code === 'P2002') {
@@ -49,10 +53,17 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    // 🔥 obtener rol desde membership
+    const membership = await this.prisma.membership.findFirst({
+      where: { userId: user.id },
+    });
+
+    const role = membership?.role || 'USER';
+
     const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role, // 🔥 ahora viene de membership
     });
 
     return {
@@ -60,7 +71,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role,
       },
     };
   }
