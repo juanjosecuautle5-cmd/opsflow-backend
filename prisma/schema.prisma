@@ -25,6 +25,7 @@ model Organization {
   name          String
 
   memberships   Membership[]
+  invitations   Invitation[]
 }
 
 model Membership {
@@ -33,8 +34,22 @@ model Membership {
   organizationId String
   role           Role          @default(USER)
 
+  permissions    String[]      // 🔥 NUEVO (PostgreSQL array)
+
   user           User          @relation(fields: [userId], references: [id])
   organization   Organization  @relation(fields: [organizationId], references: [id])
 
   @@unique([userId, organizationId])
+}
+
+model Invitation {
+  id             String   @id @default(uuid())
+  email          String
+  organizationId String
+  role           Role     @default(USER)
+  token          String   @unique
+  expiresAt      DateTime
+  accepted       Boolean  @default(false)
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
 }

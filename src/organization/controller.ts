@@ -11,7 +11,8 @@ import {
 } from '@nestjs/common';
 import { OrganizationService } from './service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { OrgRoleGuard } from '../auth/org-role.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { Permission } from '../auth/permissions.decorator';
 
 @Controller('organizations')
 export class OrganizationController {
@@ -40,8 +41,30 @@ export class OrganizationController {
     return this.service.findMyOrganizations(userId);
   }
 
-  // 🔥 AGREGAR USUARIO A ORG (NUEVO)
-  @UseGuards(JwtAuthGuard, OrgRoleGuard)
+  // 🔐 INVITAR (✔ PASO 3 correcto)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permission('user.invite')
+  @Post(':orgId/invite')
+  inviteUser(
+    @Param('orgId') orgId: string,
+    @Body() body: { email: string; role: 'ADMIN' | 'USER' },
+  ) {
+    return this.service.inviteUser(orgId, body.email, body.role);
+  }
+
+  // 🔥 ACEPTAR INVITACIÓN
+  @UseGuards(JwtAuthGuard)
+  @Post('accept-invitation')
+  acceptInvitation(
+    @Body() body: { token: string },
+    @Req() req: any,
+  ) {
+    return this.service.acceptInvitation(body.token, req.user.sub);
+  }
+
+  // 🔥 AGREGAR USUARIO
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permission('user.invite')
   @Post(':orgId/users')
   addUser(
     @Param('orgId') orgId: string,
@@ -50,15 +73,17 @@ export class OrganizationController {
     return this.service.addUserToOrganization(orgId, body.userId);
   }
 
-  // 🔥 VER USUARIOS DE UNA ORG
-  @UseGuards(JwtAuthGuard, OrgRoleGuard)
+  // 🔥 VER USUARIOS
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permission('org.view')
   @Get(':orgId/users')
   getUsersFromOrganization(@Param('orgId') orgId: string) {
     return this.service.getUsersFromOrganization(orgId);
   }
 
-  // 🔥 CAMBIAR ROLE
-  @UseGuards(JwtAuthGuard, OrgRoleGuard)
+  // 🔐 CAMBIAR ROLE (✔ PASO 3 correcto)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permission('user.role.update')
   @Patch(':orgId/users/:userId/role')
   changeUserRole(
     @Param('orgId') orgId: string,
@@ -69,7 +94,8 @@ export class OrganizationController {
   }
 
   // 🔥 DELETE ORGANIZATION
-  @UseGuards(JwtAuthGuard, OrgRoleGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permission('org.delete')
   @Delete(':orgId')
   deleteOrganization(@Param('orgId') orgId: string) {
     return this.service.deleteOrganization(orgId);
